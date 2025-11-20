@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.ProgressBar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,6 +24,8 @@ class HomeInventoryFragment : Fragment() {
     private lateinit var sessionManager: SessionManager
     private val viewModel: InventoryViewModelC by viewModels()
     private lateinit var inventoryAdapter: InventoryAdapter
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var progressBar: ProgressBar
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -35,22 +38,41 @@ class HomeInventoryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         sessionManager = SessionManager(requireContext())
 
-        setupRecyclerView(view)
+        // Initialize views
+        recyclerView = view.findViewById(R.id.recyclerview)
+        progressBar = view.findViewById(R.id.pbCircular)
+
+        setupRecyclerView()
         setupLogoutButton(view)
         setupFabAdd(view)
 
-        viewModel.getListInventory()
+        setupObservers()
+    }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.getListInventory()
+    }
+
+    private fun setupObservers() {
         viewModel.listInventory.observe(viewLifecycleOwner) { items ->
             Log.d("DEBUG_FRAGMENT", "LiveData recibió: ${items.size} items")
             Log.d("DEBUG_FRAGMENT", "Contenido: $items")
             inventoryAdapter.updateData(items)
         }
 
+        viewModel.progressState.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                progressBar.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
+            } else {
+                progressBar.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
+            }
+        }
     }
 
-    private fun setupRecyclerView(view: View) {
-        val recyclerView: RecyclerView = view.findViewById(R.id.recyclerview)
+    private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         inventoryAdapter = InventoryAdapter(emptyList())
         recyclerView.adapter = inventoryAdapter
@@ -80,4 +102,3 @@ class HomeInventoryFragment : Fragment() {
         }
     }
 }
-

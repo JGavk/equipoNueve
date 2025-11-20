@@ -114,16 +114,15 @@ class AddProductFragment : Fragment() {
             if (price.length > 20) { showToast("Precio: máximo 20 dígitos"); return@setOnClickListener }
             if (qty.length > 4) { showToast("Cantidad: máximo 4 dígitos"); return@setOnClickListener }
 
-            // TODO: integrar con ViewModel/Repo para persistir el producto
-
             val inventory = Inventory(code.toInt(), name, price.toDouble(), qty.toInt())
-            //showToast("Guardado: $code - $name - $price - qty:$qty")
 
-            inventoryViewModelC.saveInventory(inventory){msg->
+            inventoryViewModelC.saveInventory(inventory) { msg ->
+                // This is the correct sequence:
+                // 1. Show the confirmation message.
                 showToast(msg)
+                // 2. Navigate back AFTER the save is confirmed.
+                parentFragmentManager.popBackStack()
             }
-
-            parentFragmentManager.popBackStack()
         }
     }
 
@@ -169,8 +168,3 @@ class AddProductFragment : Fragment() {
         Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
     }
 }
-
-
-
-
-
