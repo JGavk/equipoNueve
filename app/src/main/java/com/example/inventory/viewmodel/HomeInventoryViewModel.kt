@@ -8,15 +8,18 @@ import com.example.inventory.data.InventoryDB
 import com.example.inventory.data.InventoryRepository
 import com.example.inventory.model.Inventory
 
-class HomeInventoryViewModel(application: Application) : AndroidViewModel(application) {
-
+class HomeInventoryViewModel(
+    application: Application,
     private val repository: InventoryRepository
+) : AndroidViewModel(application) {
 
-    val inventoryItems: LiveData<List<Inventory>>
+    val inventoryItems: LiveData<List<Inventory>> =
+        repository.getInventoryItems().asLiveData()
 
-    init {
-        val inventoryDao = InventoryDB.getDatabase(application).inventoryDao()
-        repository = InventoryRepository(inventoryDao)
-        inventoryItems = repository.getInventoryItems().asLiveData()
-    }
+    constructor(application: Application) : this(
+        application,
+        InventoryRepository(
+            InventoryDB.getDatabase(application).inventoryDao()
+        )
+    )
 }
