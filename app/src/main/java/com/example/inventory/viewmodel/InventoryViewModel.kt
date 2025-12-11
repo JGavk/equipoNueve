@@ -1,56 +1,50 @@
 package com.example.inventory.viewmodel
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.content.Context
-import android.content.Intent
-import android.widget.RemoteViews
-import com.example.inventory.R
-import com.example.inventory.ui.MainActivity
-import com.example.inventory.ui.widget.Inventory
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
+import com.example.inventory.data.InventoryDB
+import com.example.inventory.data.InventoryRepository
+import com.example.inventory.model.Inventory
+import kotlinx.coroutines.launch
 
-private const val PREFS_NAME = "com.example.inventory.ui.widget.Inventory"
-private const val PREF_PREFIX_KEY = "appwidget_"
-const val ACTION_TOGGLE_VISIBILITY = "com.example.inventory.viewmodel.ACTION_TOGGLE_VISIBILITY"
+class InventoryViewModel(
+    application: Application,
+    private val repository: InventoryRepository
+) : AndroidViewModel(application) {
 
-fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-    val views = RemoteViews(context.packageName, R.layout.inventory)
-    val prefs = context.getSharedPreferences(PREFS_NAME, 0)
-    val isVisible = prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId, true)
+    val inventoryItems: LiveData<List<Inventory>> =
+        repository.getInventoryItems().asLiveData()
 
-    if (isVisible) {
-        views.setTextViewText(R.id.inventory_amount_text, "$0.00")
-        views.setImageViewResource(R.id.visibility_toggle_button, android.R.drawable.ic_menu_view)
-    } else {
-        views.setTextViewText(R.id.inventory_amount_text, "***")
-        views.setImageViewResource(R.id.visibility_toggle_button, android.R.drawable.ic_menu_close_clear_cancel)
+    fun getItem(id: String): LiveData<Inventory> {
+        return repository.getInventoryItem(id).asLiveData()
     }
 
-    //Toggle visibility for the value of inventory   Yeimer read this lmao
-    val toggleIntent = Intent(context, Inventory::class.java).apply {
-        action = ACTION_TOGGLE_VISIBILITY
-        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+    fun saveInventoryItem(item: Inventory) {
+        viewModelScope.launch {
+            repository.saveInventoryItem(item)
+        }
     }
-    val togglePendingIntent = PendingIntent.getBroadcast(context, appWidgetId, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    views.setOnClickPendingIntent(R.id.visibility_toggle_button, togglePendingIntent)
 
-
-    val launchIntent = Intent(context, MainActivity::class.java)
-    val launchPendingIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_IMMUTABLE)
-    views.setOnClickPendingIntent(R.id.settings_button, launchPendingIntent)
-
-    appWidgetManager.updateAppWidget(appWidgetId, views)
-}
-
-fun toggleVisibility(context: Context, appWidgetId: Int) {
-    val prefs = context.getSharedPreferences(PREFS_NAME, 0)
-    val isVisible = prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId, true)
-    prefs.edit().putBoolean(PREF_PREFIX_KEY + appWidgetId, !isVisible).apply()
-}
-
-fun onWidgetDeleted(context: Context, appWidgetId: Int) {
-    context.getSharedPreferences(PREFS_NAME, 0).edit().apply {
-        remove(PREF_PREFIX_KEY + appWidgetId)
-        apply()
+    fun updateInventoryItem(item: Inventory) {
+        viewModelScope.launch {
+            repository.updateInventoryItem(item)
+        }
     }
+
+    fun deleteInventoryItem(item: Inventory) {
+        viewModelScope.launch {
+            repository.deleteInventoryItem(item)
+        }
+    }
+
+    constructor(application: Application) : this(
+        application,
+        InventoryRepository(
+            InventoryDB.getDatabase(application).inventoryDao()
+        )
+    )
 }
+
